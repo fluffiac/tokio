@@ -1102,6 +1102,25 @@ impl<T> WeakSender<T> {
         }
     }
 
+    // this is copied from the Sender implementation above. are there any
+    // issues having this api in the weak sender??
+    /// todo
+    pub async fn closed(&self) {
+        loop {
+            let notified = self.shared.notify_last_rx_drop.notified();
+
+            {
+                // Ensure the lock drops if the channel isn't closed
+                let tail = self.shared.tail.lock();
+                if tail.closed {
+                    return;
+                }
+            }
+
+            notified.await;
+        }
+    }
+
     /// Returns the number of [`Sender`] handles.
     pub fn strong_count(&self) -> usize {
         self.shared.num_tx.load(Acquire)
